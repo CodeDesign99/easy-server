@@ -8,6 +8,7 @@ const MessageEvent = {
   ANSWER: "answer",
   GET_OFFER: "getOffer",
   ICE_CANDIDATE: "icecandidate",
+  EXIT: "exit",
 }
 
 function createSocket (app) {
@@ -36,17 +37,19 @@ function initSocket (socket, clients) {
     id: socket.id,
     socket,
   }
+  // offer SDP 交换
   socket.on(MessageEvent.OFFER, (data) => {
-    const { webrtcId, offer, merberId: socketId } = data
+    const { webrtcId, offer, merberId: socketId, type } = data
     const connectorSocket = clients[socketId];
     if (!connectorSocket) return
     connectorSocket.socket.emit(MessageEvent.OFFER, {
       connectorWebrtcId: webrtcId,
       offer,
-      merberId: socket.id
+      merberId: socket.id,
+      type
     })
   })
-
+  // answer SDP 交换
   socket.on(MessageEvent.ANSWER, (data) => {
     const { connectorWebrtcId, webrtcId, answer, merberId: socketId } = data
     const connectorSocket = clients[socketId];
@@ -58,7 +61,7 @@ function initSocket (socket, clients) {
       merberId: socket.id
     })
   })
-
+  // icecandidate 交换
   socket.on(MessageEvent.ICE_CANDIDATE, (data) => {
     const { connectorWebrtcId, merberId: socketId, candidate } = data
     const connectorSocket = clients[socketId];
@@ -69,9 +72,18 @@ function initSocket (socket, clients) {
     })
   })
 
+  socket.on(MessageEvent.EXIT, (dataList) => {
+    dataList.forEach((data) => {
+      const { connectorWebrtcId: webrtcId, merberId: socketId } = data
+      const connectorSocket = clients[socketId];
+      if (!connectorSocket) return
+      connectorSocket.socket.emit(MessageEvent.EXIT, { webrtcId })
+    })
+  })
+
   Object.keys(clients).forEach(id => {
     const client = clients[id];
-    client.socket.emit(MessageEvent.GET_OFFER, { id: socket.id });
+    client.socket.emit(MessageEvent.GET_OFFER, { merberId: socket.id });
   })
 
   clients[socket.id] = client
