@@ -3,7 +3,7 @@ const { Server } = require("socket.io");
 const { PORT } = require("../services");
 const { clients } = require("../../config/database");
 
-const MessageEvent = {
+const MessageEventName = {
   OFFER: "offer",
   ANSWER: "answer",
   GET_OFFER: "getOffer",
@@ -38,52 +38,53 @@ function initSocket (socket, clients) {
     socket,
   }
   // offer SDP 交换
-  socket.on(MessageEvent.OFFER, (data) => {
-    const { webrtcId, offer, merberId: socketId, type } = data
+  socket.on(MessageEventName.OFFER, (data) => {
+    const { connectorId, offer, memberId: socketId, streaTtype } = data
     const connectorSocket = clients[socketId];
     if (!connectorSocket) return
-    connectorSocket.socket.emit(MessageEvent.OFFER, {
-      connectorWebrtcId: webrtcId,
+    connectorSocket.socket.emit(MessageEventName.OFFER, {
+      remoteConnectorId: connectorId,
       offer,
-      merberId: socket.id,
-      type
+      memberId: socket.id,
+      streaTtype
     })
   })
   // answer SDP 交换
-  socket.on(MessageEvent.ANSWER, (data) => {
-    const { connectorWebrtcId, webrtcId, answer, merberId: socketId } = data
+  socket.on(MessageEventName.ANSWER, (data) => {
+    const { remoteConnectorId, connectorId, answer, memberId: socketId } = data
     const connectorSocket = clients[socketId];
     if (!connectorSocket) return
-    connectorSocket.socket.emit(MessageEvent.ANSWER, {
-      connectorWebrtcId: webrtcId,
-      webrtcId: connectorWebrtcId,
+    connectorSocket.socket.emit(MessageEventName.ANSWER, {
+      remoteConnectorId: connectorId,
+      connectorId: remoteConnectorId,
       answer,
-      merberId: socket.id
+      memberId: socket.id
     })
   })
   // icecandidate 交换
-  socket.on(MessageEvent.ICE_CANDIDATE, (data) => {
-    const { connectorWebrtcId, merberId: socketId, candidate } = data
+  socket.on(MessageEventName.ICE_CANDIDATE, (data) => {
+    const { remoteConnectorId, memberId: socketId, candidate } = data
     const connectorSocket = clients[socketId];
     if (!connectorSocket) return
-    connectorSocket.socket.emit(MessageEvent.ICE_CANDIDATE, {
-      webrtcId: connectorWebrtcId,
+    connectorSocket.socket.emit(MessageEventName.ICE_CANDIDATE, {
+      connectorId: remoteConnectorId,
       candidate
     })
   })
 
-  socket.on(MessageEvent.EXIT, (dataList) => {
-    dataList.forEach((data) => {
-      const { connectorWebrtcId: webrtcId, merberId: socketId } = data
-      const connectorSocket = clients[socketId];
-      if (!connectorSocket) return
-      connectorSocket.socket.emit(MessageEvent.EXIT, { webrtcId })
-    })
-  })
+  // 使用RTCDataChannel实现数据通信，不再依赖服务器
+  // socket.on(MessageEventName.EXIT, (dataList) => {
+  //   dataList.forEach((data) => {
+  //     const { remoteConnectorId: connectorId, memberId: socketId } = data
+  //     const connectorSocket = clients[socketId];
+  //     if (!connectorSocket) return
+  //     connectorSocket.socket.emit(MessageEventName.EXIT, { connectorId, memberId: socket.id })
+  //   })
+  // })
 
   Object.keys(clients).forEach(id => {
     const client = clients[id];
-    client.socket.emit(MessageEvent.GET_OFFER, { merberId: socket.id });
+    client.socket.emit(MessageEventName.GET_OFFER, { memberId: socket.id });
   })
 
   clients[socket.id] = client
