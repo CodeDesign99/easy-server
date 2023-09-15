@@ -39,14 +39,14 @@ function initSocket (socket, clients) {
   }
   // offer SDP 交换
   socket.on(MessageEventName.OFFER, (data) => {
-    const { connectorId, offer, memberId: socketId, streaTtype } = data
+    const { connectorId, offer, memberId: socketId, streamType } = data
     const connectorSocket = clients[socketId];
     if (!connectorSocket) return
     connectorSocket.socket.emit(MessageEventName.OFFER, {
       remoteConnectorId: connectorId,
       offer,
       memberId: socket.id,
-      streaTtype
+      streamType
     })
   })
   // answer SDP 交换
