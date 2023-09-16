@@ -1,14 +1,15 @@
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { PORT } = require("../services");
-const { clients } = require("../../config/database");
+const { clients, userInfoMap, rooms } = require("../../config/database");
 
 const MessageEventName = {
   OFFER: "offer",
   ANSWER: "answer",
   GET_OFFER: "getOffer",
   ICE_CANDIDATE: "icecandidate",
-  EXIT: "exit",
+  LEAVE: "leave",
+  JOIN: "join",
 }
 
 function createSocket (app) {
@@ -72,19 +73,45 @@ function initSocket (socket, clients) {
     })
   })
 
-  // 使用RTCDataChannel实现数据通信，不再依赖服务器
-  // socket.on(MessageEventName.EXIT, (dataList) => {
-  //   dataList.forEach((data) => {
-  //     const { remoteConnectorId: connectorId, memberId: socketId } = data
-  //     const connectorSocket = clients[socketId];
-  //     if (!connectorSocket) return
-  //     connectorSocket.socket.emit(MessageEventName.EXIT, { connectorId, memberId: socket.id })
-  //   })
-  // })
+  // 加入房间
+  socket.on(MessageEventName.JOIN, (data) => {
+    const { id, username, roomname } = data
+    client.userId = id
+    if (userInfoMap[id]) {
+      userInfoMap[id].socketId = socket.id
+      return
+    }
+    const userInfo = {
+      id,
+      username,
+      roomname,
+      socketId: socket.id
+    }
+    userInfoMap[id] = userInfo
 
-  Object.keys(clients).forEach(id => {
-    const client = clients[id];
-    client.socket.emit(MessageEventName.GET_OFFER, { memberId: socket.id });
+    const room = rooms[roomname] ? rooms[roomname] : (rooms[roomname] = {})
+    Object.keys(room).forEach(id => {
+      const socketId = room[id]
+      const connectorSocket = clients[socketId];
+      if (!connectorSocket) return
+      connectorSocket.socket.emit(MessageEventName.GET_OFFER, { memberId: socket.id });
+    })
+    room[id] = userInfo
+  })
+
+  // 退出房间
+  socket.on(MessageEventName.LEAVE, (dataList) => {
+    const userId = client.userId
+    const roomname = userInfoMap[userId].roomname
+    const room = rooms[roomname]
+    delete room[userId]
+    delete userInfoMap[userId]
+    dataList.forEach((data) => {
+      const { remoteConnectorId: connectorId, memberId: socketId } = data
+      const connectorSocket = clients[socketId];
+      if (!connectorSocket) return
+      connectorSocket.socket.emit(MessageEventName.LEAVE, { connectorId, memberId: socket.id })
+    })
   })
 
   clients[socket.id] = client
