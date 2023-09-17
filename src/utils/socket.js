@@ -10,6 +10,7 @@ const MessageEventName = {
   ICE_CANDIDATE: "icecandidate",
   LEAVE: "leave",
   JOIN: "join",
+  ERROR: "error",
 }
 
 function createSocket (app) {
@@ -25,6 +26,7 @@ function createSocket (app) {
     socket.on('disconnect', () => {      
       delete clients[socket.id];
       console.log(`Client disconnected: ${socket.id}`, clients);
+      log('所有房间', rooms)
     });
   });
 
@@ -78,40 +80,61 @@ function initSocket (socket, clients) {
     const { id, username, roomname } = data
     client.userId = id
     if (userInfoMap[id]) {
-      userInfoMap[id].socketId = socket.id
-      return
+      const clientTemp = clients[userInfoMap[id].socketId]
+      // 退出房间后未关闭socket连接再次加入
+      if (clientTemp && clientTemp === client) {
+        next()
+        return
+      } else if (clientTemp && clientTemp !== client) {
+        socket.emit(MessageEventName.ERROR, {
+          message: '此房间该用户名已存在'
+        })
+      // 断开socket连接未退出房间进行重连 （存在断网情况下断开socket连接 且 客户端未成功发送退出房间）
+      } else if(!clientTemp) {
+        userInfoMap[id].socketId = socket.id
+      }
     }
-    const userInfo = {
-      id,
-      username,
-      roomname,
-      socketId: socket.id
+    function next() {
+      const userInfo = {
+        id,
+        username,
+        roomname,
+        socketId: socket.id
+      }
+      userInfoMap[id] = userInfo
+  
+      const room = rooms[roomname] ? rooms[roomname] : (rooms[roomname] = {})
+      Object.keys(room).forEach(id => {
+        const { socketId } = room[id]
+        const connectorSocket = clients[socketId];
+        if (!connectorSocket) return
+        connectorSocket.socket.emit(MessageEventName.GET_OFFER, { memberId: socket.id });
+      })
+      room[id] = userInfo
+      log('所有房间', rooms)
     }
-    userInfoMap[id] = userInfo
-
-    const room = rooms[roomname] ? rooms[roomname] : (rooms[roomname] = {})
-    Object.keys(room).forEach(id => {
-      const socketId = room[id]
-      const connectorSocket = clients[socketId];
-      if (!connectorSocket) return
-      connectorSocket.socket.emit(MessageEventName.GET_OFFER, { memberId: socket.id });
-    })
-    room[id] = userInfo
+    next()
   })
 
   // 退出房间
   socket.on(MessageEventName.LEAVE, (dataList) => {
     const userId = client.userId
+    if (!userId) return
     const roomname = userInfoMap[userId].roomname
     const room = rooms[roomname]
     delete room[userId]
     delete userInfoMap[userId]
+    delete client.userId
     dataList.forEach((data) => {
       const { remoteConnectorId: connectorId, memberId: socketId } = data
       const connectorSocket = clients[socketId];
       if (!connectorSocket) return
       connectorSocket.socket.emit(MessageEventName.LEAVE, { connectorId, memberId: socket.id })
     })
+    if (!Object.keys(room).length) {
+      delete rooms[roomname]
+    }
+    log('所有房间', rooms)
   })
 
   clients[socket.id] = client

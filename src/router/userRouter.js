@@ -1,7 +1,7 @@
 const { userTable } = require('../../config/database');
 const { createToken, refreshTokenFn } = require('../middlewares/auth');
 const { createUserId } = require('../utils/uuid');
-const { clients } = require('../../config/database');
+const { clients, rooms } = require('../../config/database');
 
 // 使用路由
 function useRouter(app) {
@@ -57,11 +57,17 @@ function useRouter(app) {
     })
   });
 
-  app.get('/getRoomMemberInfo', (req, res) => {
-    const roomMemberInfo = Object.keys(clients).map(key => ({id: clients[key].id}))
-    res.json({ success: true, data: {
-      roomMemberInfo
-    }});
+  app.get('/checkUername', (req, res) => {
+    const { username, roomname } = req.query;
+    const room = rooms[roomname];
+    if (!room) {
+      res.status(200).json({ success: true, isRepeat: false });
+      return
+    }
+    const isRepeat = Object.keys(room).some(id => {
+      return room[id].username === username
+    })
+    res.status(200).json({ success: true, isRepeat });
   })
 }
 
