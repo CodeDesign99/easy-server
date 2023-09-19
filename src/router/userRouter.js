@@ -57,7 +57,7 @@ function useRouter(app) {
     })
   });
 
-  app.get('/checkUername', (req, res) => {
+  app.get('/checkUsername', (req, res) => {
     const { username, roomname } = req.query;
     const room = rooms[roomname];
     if (!room) {
