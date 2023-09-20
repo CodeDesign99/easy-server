@@ -7,7 +7,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "webpack --mode production",
-    "start": "npx nodemon ./src/app.js"
+    "start": "npx nodemon ./src/app.js",
+    "pm2": "npx pm2 start ./src/app.js"
   },
   "keywords": [],
   "author": "",
