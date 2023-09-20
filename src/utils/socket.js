@@ -1,8 +1,12 @@
-const { createServer } = require("http");
+const { readFileSync } = require("fs");
+const { createServer } = require("https");
+// const { createServer } = require("http");
 const { Server } = require("socket.io");
 const { PORT } = require("../services");
 const { clients, userInfoMap, rooms } = require("../../config/database");
 const { debounce } = require("./util");
+
+const path = require('path');
 
 const MessageEventName = {
   OFFER: "offer",
@@ -38,7 +42,10 @@ const StreamTypeEnum = {
 const clearTime = 1000 * 15;
 
 function createSocket (app) {
-  const httpServer = createServer(app);
+  const httpServer = createServer({
+    key: readFileSync(path.join(__dirname, '../../../key.pem')),
+    cert: readFileSync(path.join(__dirname, '../../../certificate.pem'))
+  }, app);
   const io = new Server(httpServer, { cors: true });
   
   io.on('connection', (socket) => {
@@ -60,7 +67,7 @@ function createSocket (app) {
   });
 
   httpServer.listen(PORT, () => {
-    console.log(`http://localhost:${PORT}/`);
+    console.log(`https://localhost:${PORT}/`);
   });
 };
 

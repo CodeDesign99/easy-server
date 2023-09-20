@@ -5,7 +5,7 @@ const moduleDir = path.join(__dirname, '.');
 const excludeFileName = 'index.js';
 
 function creatRouter(app) {
-  useHomeRouter(app)
+  // useHomeRouter(app)
   // 遍历并导入所有模块
   fs.readdirSync(moduleDir).forEach(file => {
     if (file !== excludeFileName){
