@@ -43,8 +43,8 @@ const clearTime = 1000 * 15;
 
 function createSocket (app) {
   const httpServer = createServer({
-    key: readFileSync(path.join(__dirname, '../../../key.pem')),
-    cert: readFileSync(path.join(__dirname, '../../../certificate.pem'))
+    key: readFileSync(path.join(__dirname, '../../../app.rtcchatroom.cn.key')),
+    cert: readFileSync(path.join(__dirname, '../../../app.rtcchatroom.cn.pem'))
   }, app);
   const io = new Server(httpServer, { cors: true });
   
