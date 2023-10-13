@@ -5,16 +5,14 @@
   "type": "commonjs",
   "main": "./src/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --mode production",
-    "start": "npx nodemon ./src/app.js",
-    "pm2": "npx pm2 start ./src/app.js"
+    "start": "cross-env NODE_ENV=development npx nodemon ./src/app.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "body-parser": "^1.20.2",
+    "cross-env": "^7.0.3",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.1",
     "livekit-server-sdk": "^1.2.6",

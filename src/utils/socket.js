@@ -1,12 +1,13 @@
 const { readFileSync } = require("fs");
-const { createServer } = require("https");
-// const { createServer } = require("http");
+const { createServer: createHttpsServer } = require("https");
+const { createServer: createHttpServer } = require("http");
 const { Server } = require("socket.io");
 const { PORT } = require("../services");
 const { clients, userInfoMap, rooms } = require("../../config/database");
 const { debounce } = require("./util");
 
 const path = require('path');
+const isDev = process.env.NODE_ENV === 'development';
 
 const MessageEventName = {
   OFFER: "offer",
@@ -42,7 +43,7 @@ const StreamTypeEnum = {
 const clearTime = 1000 * 15;
 
 function createSocket (app) {
-  const httpServer = createServer({
+  const httpServer = isDev ? createHttpServer(app) : createHttpsServer({
     key: readFileSync(path.join(__dirname, '../../../app.rtcchatroom.cn.key')),
     cert: readFileSync(path.join(__dirname, '../../../app.rtcchatroom.cn.pem'))
   }, app);
@@ -67,7 +68,7 @@ function createSocket (app) {
   });
 
   httpServer.listen(PORT, () => {
-    console.log(`https://localhost:${PORT}/`);
+    console.log(`${isDev ? 'http' : 'https'}://localhost:${PORT}/`);
   });
 };
 
